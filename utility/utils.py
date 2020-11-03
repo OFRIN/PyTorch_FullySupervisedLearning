@@ -72,6 +72,14 @@ def get_today():
     s = "%04d-%02d-%02d-%02dh%02dm%02ds" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
     return s
 
+def log_print(string='', log_path = './log.txt'):
+    print(string)
+
+    if log_path is not None:
+        f = open(log_path, 'a+')
+        f.write(string + '\n')
+        f.close()
+
 def csv_print(data_list, log_path = './log.csv'):
     string = ''
     for data in data_list:

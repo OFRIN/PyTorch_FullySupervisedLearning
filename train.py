@@ -24,8 +24,9 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from core.networks import *
-from core.utils import *
+from core.data_utils import *
 
+from core.utils import *
 from utility.utils import *
 
 parser = argparse.ArgumentParser()
@@ -39,13 +40,14 @@ parser.add_argument('--use_gpu', default='0', type=str)
 # Dataset
 ###############################################################################
 parser.add_argument('--seed', default=0, type=int)
+parser.add_argument('--data_dir', default='./data/', type=str)
 parser.add_argument('--use_cores', default=mp.cpu_count(), type=int)
 
 ###############################################################################
 # Network
 ###############################################################################
-parser.add_argument('--experiment_name', default='CIFAR-10', type=str)
-parser.add_argument('--dataset_name', default='CIFAR-10', type=str)
+parser.add_argument('--experiment_name', default='C10_C100_STL10', type=str)
+parser.add_argument('--dataset_name', default='CIFAR-10,CIFAR-100,STL-10', type=str)
 
 parser.add_argument('--weight_decay', default=1e-4, type=float)
 
@@ -83,166 +85,37 @@ if __name__ == '__main__':
 
     train_csv_path = log_dir + f'{args.experiment_name}_train.csv'
     valid_csv_path = log_dir + f'{args.experiment_name}_validation.csv'
+    log_path = log_dir + f'{args.experiment_name}_log.txt'
     model_path = model_dir + f'{args.experiment_name}.pth'
+
+    log_func = lambda string='': log_print(string, log_path)
     
     if os.path.isfile(model_path): os.remove(model_path)
     if os.path.isfile(train_csv_path): os.remove(train_csv_path)
     if os.path.isfile(valid_csv_path): os.remove(valid_csv_path)
+    if os.path.isfile(log_path): os.remove(log_path)
     
     # 2. Dataset
     if args.dataset_name == 'CIFAR-10':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomHorizontalFlip(),
-
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ])
-        }
-
-        train_dataset = datasets.CIFAR10('./data/', train=True, download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.CIFAR10('./data/', train=True, download=True, transform=transform_dic['test'])
-        test_dataset = datasets.CIFAR10('./data/', train=False, download=True, transform=transform_dic['test'])
-
-        in_channels = 3
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_CIFAR_10(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'CIFAR-100':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomHorizontalFlip(),
-
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ])
-        }
-
-        train_dataset = datasets.CIFAR100('./data/', train=True, download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.CIFAR100('./data/', train=True, download=True, transform=transform_dic['test'])
-        test_dataset = datasets.CIFAR100('./data/', train=False, download=True, transform=transform_dic['test'])
-
-        in_channels = 3
-        classes = 100
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_CIFAR_100(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'STL-10':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomHorizontalFlip(),
-
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ])
-        }
-
-        train_dataset = datasets.STL10('./data/', 'train', download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.STL10('./data/', 'train', download=True, transform=transform_dic['test'])
-        test_dataset = datasets.STL10('./data/', 'test', download=True, transform=transform_dic['test'])
-
-        in_channels = 3
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_STL_10(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'MNIST':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomAffine(degrees=45, translate=(0.1, 0.1), scale=(0.8, 1.2)),
-
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ])
-        }
-
-        train_dataset = datasets.MNIST('./data/', train=True, download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.MNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-        test_dataset = datasets.MNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-
-        in_channels = 1
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_MNIST(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'KMNIST':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomAffine(degrees=45, translate=(0.1, 0.1), scale=(0.8, 1.2)),
-
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ])
-        }
-
-        train_dataset = datasets.KMNIST('./data/', train=True, download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.KMNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-        test_dataset = datasets.KMNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-
-        in_channels = 1
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_KMNIST(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'FashionMNIST':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomAffine(degrees=45, translate=(0.1, 0.1), scale=(0.8, 1.2)),
-
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5])
-            ])
-        }
-        
-        train_dataset = datasets.FashionMNIST('./data/', train=True, download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.FashionMNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-        test_dataset = datasets.FashionMNIST('./data/', train=True, download=True, transform=transform_dic['test'])
-
-        in_channels = 1
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_FashionMNIST(args.data_dir, args.image_size)
 
     elif args.dataset_name == 'SVHN':
-        transform_dic = {
-            'train' : transforms.Compose([
-                transforms.RandomCrop(args.image_size, padding=4),
-                transforms.RandomAffine(degrees=45, translate=(0.1, 0.1), scale=(0.8, 1.2)),
-
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ]),
-            'test' : transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-            ])
-        }
-
-        train_dataset = datasets.SVHN('./data/SVHN/', 'train', download=True, transform=transform_dic['train'])
-        validation_dataset = datasets.SVHN('./data/SVHN/', 'train', download=True, transform=transform_dic['test'])
-        test_dataset = datasets.SVHN('./data/SVHN/', 'test', download=True, transform=transform_dic['test'])
-
-        in_channels = 3
-        classes = 10
+        train_dataset, validation_dataset, test_dataset, in_channels, classes = get_SVHN(args.data_dir, args.image_size)
 
     train_length = int(len(train_dataset) * 0.9)
     indices = np.arange(len(train_dataset))
@@ -251,6 +124,12 @@ if __name__ == '__main__':
 
     train_indices = indices[:train_length]
     validation_indices = indices[train_length:]
+    
+    log_func('# Dataset ({})'.format(args.dataset_name))
+    log_func('[i] The size of train dataset = {}'.format(len(train_indices)))
+    log_func('[i] The size of validation dataset = {}'.format(len(validation_indices)))
+    log_func('[i] The size of test dataset = {}'.format(len(test_dataset)))
+    log_func()
 
     train_sampler = SubsetRandomSampler(train_indices)
     validation_sampler = SubsetRandomSampler(validation_indices)
@@ -280,7 +159,7 @@ if __name__ == '__main__':
     # 5. Training
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
-        print('[i] Distributed Training  : {}, device count = {}, batch size = {}'.format(os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count(), args.batch_size))
+        log_func('[i] Distributed Training  : {}, device count = {}, batch size = {}'.format(os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count(), args.batch_size))
 
     model = model.to(device)
     
@@ -298,7 +177,6 @@ if __name__ == '__main__':
     train_iter = iter(train_loader)
 
     for iteration in range(1, args.max_iterations + 1):
-        scheduler.step()
 
         try:
             images, labels = next(train_iter)
@@ -317,17 +195,17 @@ if __name__ == '__main__':
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         loss = loss.item()
         accuracy = accuracy.item()
-        learning_rate = get_learning_rate_from_optimizer(optimizer)
 
         train_avg.add({'loss':loss, 'accuracy':accuracy})
         
         if iteration % args.log_interval == 0:
-            data = [iteration, scheduler.get_lr()] + train_avg.get(clear=True) + [train_timer.tok(clear=True)]
+            data = [iteration, get_learning_rate_from_optimizer(optimizer)] + train_avg.get(clear=True) + [train_timer.tok(clear=True)]
 
-            print('[i] iter={}, lr={}, loss={:.4f}, accuracy={:.2f}%, train_sec={}sec'.format(*data))
+            log_func('[i] iter={}, lr={}, loss={:.4f}, accuracy={:.2f}%, train_sec={}sec'.format(*data))
             csv_print(data, train_csv_path)
 
         if iteration % args.val_interval == 0:
@@ -364,7 +242,7 @@ if __name__ == '__main__':
                 save_model(model, model_path)
 
             data = [iteration, loss, accuracy, best_valid_accuracy, test_timer.tok(clear=True)]
-            print('[i] iter={}, valid_loss={:.4f}, valid_accuracy={:.2f}%, best_valid_accuracy={:.2f}%, test_sec={}sec'.format(*data))
+            log_func('[i] iter={}, valid_loss={:.4f}, valid_accuracy={:.2f}%, best_valid_accuracy={:.2f}%, test_sec={}sec'.format(*data))
             csv_print(data, valid_csv_path)
             
             model.train()
@@ -373,7 +251,4 @@ if __name__ == '__main__':
     load_model(model, model_path)
 
     _, test_accuracy = get_loss_and_accuracy(test_loader)
-    print('[i] test accuracy = {:.2f}%'.format(test_accuracy))
-
-    csv_print([-1, -1, test_accuracy, -1, -1], valid_csv_path)
-
+    log_func('# Final Test Accuracy = {:.2f}%'.format(test_accuracy))
