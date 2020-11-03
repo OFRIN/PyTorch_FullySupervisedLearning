@@ -29,7 +29,7 @@ log_func = lambda string='': log_print(string, log_path)
 for name, function in dataset_info_list:
     # 1. load dataset
     train_dataset, _, _, _, _ = function('./data/', train_transforms=customized_transforms)
-
+    
     means = []
     stds = []
 

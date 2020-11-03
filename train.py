@@ -87,7 +87,7 @@ if __name__ == '__main__':
     valid_csv_path = log_dir + f'{args.experiment_name}_validation.csv'
     log_path = log_dir + f'{args.experiment_name}_log.txt'
     model_path = model_dir + f'{args.experiment_name}.pth'
-
+    
     log_func = lambda string='': log_print(string, log_path)
     
     if os.path.isfile(model_path): os.remove(model_path)

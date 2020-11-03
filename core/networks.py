@@ -95,7 +95,7 @@ class WideResNet(nn.Module):
         self.relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
         self.fc = nn.Linear(channels[3], num_classes)
         self.channels = channels[3]
-
+        
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
