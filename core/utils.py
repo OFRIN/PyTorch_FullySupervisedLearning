@@ -25,3 +25,28 @@ def save_model(model, model_path):
         torch.save(model.module.state_dict(), model_path)
     else:
         torch.save(model.state_dict(), model_path)
+
+def get_labels_from_dataset(dataset):
+    try:
+        labels = dataset.targets
+    except:
+        labels = [label for image, label in dataset]
+
+    return np.asarray(labels)
+
+def split_train_and_validation_datasets(dataset, classes, ratio=0.1):
+    labels = get_labels_from_dataset(dataset)
+    
+    train_indices = []
+    validation_indices = []
+
+    for class_index in range(classes):
+        indices = np.where(labels == class_index)[0]
+        validation_size_per_class = int(len(indices) * ratio)
+
+        np.random.shuffle(indices)
+
+        train_indices.extend(indices[:-validation_size_per_class])
+        validation_indices.extend(indices[-validation_size_per_class:])
+
+    return train_indices, validation_indices

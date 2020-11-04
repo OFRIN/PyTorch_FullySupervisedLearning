@@ -46,8 +46,8 @@ parser.add_argument('--use_cores', default=mp.cpu_count(), type=int)
 ###############################################################################
 # Network
 ###############################################################################
-parser.add_argument('--experiment_name', default='C10_C100_STL10', type=str)
-parser.add_argument('--dataset_name', default='CIFAR-10,CIFAR-100,STL-10', type=str)
+parser.add_argument('--experiment_name', default='CIFAR-10_seed@0', type=str)
+parser.add_argument('--dataset_name', default='CIFAR-10', type=str)
 
 parser.add_argument('--weight_decay', default=1e-4, type=float)
 
@@ -116,21 +116,15 @@ if __name__ == '__main__':
 
     elif args.dataset_name == 'SVHN':
         train_dataset, validation_dataset, test_dataset, in_channels, classes = get_SVHN(args.data_dir, args.image_size)
-
-    train_length = int(len(train_dataset) * 0.9)
-    indices = np.arange(len(train_dataset))
-
-    np.random.shuffle(indices)
-
-    train_indices = indices[:train_length]
-    validation_indices = indices[train_length:]
+    
+    train_indices, validation_indices = split_train_and_validation_datasets(train_dataset, classes, ratio=0.1)
     
     log_func('# Dataset ({})'.format(args.dataset_name))
     log_func('[i] The size of train dataset = {}'.format(len(train_indices)))
     log_func('[i] The size of validation dataset = {}'.format(len(validation_indices)))
     log_func('[i] The size of test dataset = {}'.format(len(test_dataset)))
     log_func()
-
+    
     train_sampler = SubsetRandomSampler(train_indices)
     validation_sampler = SubsetRandomSampler(validation_indices)
     
@@ -231,7 +225,7 @@ if __name__ == '__main__':
                         sys.stdout.write('\r# Evaluation = {:.02f}% [{}/{}]'.format((step + 1) / evaluation_length * 100, step + 1, evaluation_length))
                         sys.stdout.flush()
                 print()
-
+                
                 loss, accuracy = test_avg.get(clear=True)
                 return loss, accuracy
 
